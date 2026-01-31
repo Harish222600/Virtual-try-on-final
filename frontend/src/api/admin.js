@@ -22,6 +22,16 @@ export const adminAPI = {
         return response.data;
     },
 
+    createUser: async (userData) => {
+        const response = await api.post('/admin/users', userData);
+        return response.data;
+    },
+
+    updateUserRole: async (userId, role) => {
+        const response = await api.put(`/admin/users/${userId}/role`, { role });
+        return response.data;
+    },
+
     // Garments
     getAllGarments: async (params = {}) => {
         const response = await api.get('/admin/garments', { params });

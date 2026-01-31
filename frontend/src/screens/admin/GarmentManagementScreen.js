@@ -14,6 +14,8 @@ import {
     ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { adminAPI } from '../../api';
 
@@ -21,11 +23,14 @@ const GarmentManagementScreen = () => {
     const [garments, setGarments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [search, setSearch] = useState('');
+
+    // Form State
     const [showModal, setShowModal] = useState(false);
     const [editingGarment, setEditingGarment] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
-    // Form state
+    // Form Fields
     const [name, setName] = useState('');
     const [category, setCategory] = useState('shirt');
     const [gender, setGender] = useState('unisex');
@@ -39,11 +44,14 @@ const GarmentManagementScreen = () => {
 
     useEffect(() => {
         loadGarments();
-    }, []);
+    }, [search]);
 
     const loadGarments = async () => {
         try {
-            const response = await adminAPI.getAllGarments({ limit: 100 });
+            const params = { limit: 100 };
+            if (search.trim()) params.search = search.trim();
+
+            const response = await adminAPI.getAllGarments(params);
             setGarments(response.data);
         } catch (error) {
             Alert.alert('Error', 'Failed to load garments');
@@ -56,7 +64,7 @@ const GarmentManagementScreen = () => {
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         loadGarments();
-    }, []);
+    }, [search]);
 
     const resetForm = () => {
         setName('');
@@ -183,36 +191,116 @@ const GarmentManagementScreen = () => {
     };
 
     const renderGarment = ({ item }) => (
-        <View style={styles.garmentCard}>
-            <Image source={{ uri: item.imageUrl }} style={styles.garmentImage} />
-            <View style={styles.garmentInfo}>
-                <Text style={styles.garmentName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.garmentMeta}>{item.category} • {item.gender}</Text>
-                {!item.isActive && (
-                    <View style={styles.inactiveBadge}>
-                        <Text style={styles.inactiveText}>Hidden</Text>
+        <View style={styles.cardContainer}>
+            <LinearGradient
+                colors={['#2d2d44', '#1a1a2e']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.garmentCard}
+            >
+                <View style={styles.cardContent}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.garmentImage} />
+                    <View style={styles.garmentInfo}>
+                        <View style={styles.headerRow}>
+                            <Text style={styles.garmentName} numberOfLines={1}>{item.name}</Text>
+                            {!item.isActive && (
+                                <View style={styles.inactiveBadge}>
+                                    <Ionicons name="eye-off" size={12} color="#f59e0b" />
+                                    <Text style={styles.inactiveText}>Hidden</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={styles.tagsRow}>
+                            <View style={styles.tag}>
+                                <Text style={styles.tagText}>{item.category}</Text>
+                            </View>
+                            <View style={styles.tag}>
+                                <Text style={styles.tagText}>{item.gender}</Text>
+                            </View>
+                        </View>
+
+                        {item.description ? (
+                            <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+                        ) : null}
                     </View>
-                )}
-            </View>
-            <View style={styles.garmentActions}>
-                <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
-                    <Text>✏️</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.toggleBtn} onPress={() => toggleActive(item)}>
-                    <Text>{item.isActive ? '👁️' : '👁️‍🗨️'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteGarment(item._id, item.name)}>
-                    <Text>🗑️</Text>
-                </TouchableOpacity>
-            </View>
+                </View>
+
+                <View style={styles.cardActions}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => openEditModal(item)}
+                    >
+                        <LinearGradient
+                            colors={['rgba(99, 102, 241, 0.2)', 'rgba(99, 102, 241, 0.1)']}
+                            style={styles.actionGradient}
+                        >
+                            <Ionicons name="create-outline" size={18} color="#6366f1" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => toggleActive(item)}
+                    >
+                        <LinearGradient
+                            colors={item.isActive
+                                ? ['rgba(16, 185, 129, 0.2)', 'rgba(16, 185, 129, 0.1)']
+                                : ['rgba(245, 158, 11, 0.2)', 'rgba(245, 158, 11, 0.1)']}
+                            style={styles.actionGradient}
+                        >
+                            <Ionicons
+                                name={item.isActive ? "eye-outline" : "eye-off-outline"}
+                                size={18}
+                                color={item.isActive ? "#10b981" : "#f59e0b"}
+                            />
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => deleteGarment(item._id, item.name)}
+                    >
+                        <LinearGradient
+                            colors={['rgba(239, 68, 68, 0.2)', 'rgba(239, 68, 68, 0.1)']}
+                            style={styles.actionGradient}
+                        >
+                            <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            </LinearGradient>
         </View>
     );
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>
-            <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-                <Text style={styles.addButtonText}>+ Add New Garment</Text>
-            </TouchableOpacity>
+            <LinearGradient
+                colors={['#1a1a2e', '#0f0f23']}
+                style={styles.header}
+            >
+                <View style={styles.searchSection}>
+                    <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search garments..."
+                        placeholderTextColor="#666"
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+                <TouchableOpacity
+                    style={styles.addInitButton}
+                    onPress={openAddModal}
+                >
+                    <LinearGradient
+                        colors={['#6366f1', '#8b5cf6']}
+                        style={styles.addInitGradient}
+                    >
+                        <Ionicons name="add" size={28} color="#fff" />
+                    </LinearGradient>
+                </TouchableOpacity>
+            </LinearGradient>
 
             {loading ? (
                 <View style={styles.loadingContainer}>
@@ -230,122 +318,148 @@ const GarmentManagementScreen = () => {
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyIcon}>👗</Text>
-                            <Text style={styles.emptyText}>No garments yet</Text>
+                            <Ionicons name="shirt-outline" size={64} color="#6366f1" />
+                            <Text style={styles.emptyText}>No garments found</Text>
+                            <Text style={styles.emptySubText}>Add some garments to get started</Text>
                         </View>
                     }
                 />
             )}
 
-            <Modal visible={showModal} animationType="slide" transparent>
+            <Modal visible={showModal} animationType="fade" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
+                        <LinearGradient
+                            colors={['#1a1a2e', '#2d2d44']}
+                            style={styles.modalGradient}
+                        >
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>
                                     {editingGarment ? 'Edit Garment' : 'Add New Garment'}
                                 </Text>
-                                <TouchableOpacity onPress={() => setShowModal(false)}>
-                                    <Text style={styles.closeButton}>✕</Text>
+                                <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeButton}>
+                                    <Ionicons name="close" size={24} color="#888" />
                                 </TouchableOpacity>
                             </View>
 
-                            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                                {imageUri || editingGarment?.imageUrl ? (
-                                    <Image
-                                        source={{ uri: imageUri || editingGarment?.imageUrl }}
-                                        style={styles.pickedImage}
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                                    {imageUri || editingGarment?.imageUrl ? (
+                                        <Image
+                                            source={{ uri: imageUri || editingGarment?.imageUrl }}
+                                            style={styles.pickedImage}
+                                        />
+                                    ) : (
+                                        <View style={styles.imagePlaceholder}>
+                                            <Ionicons name="camera-outline" size={40} color="#666" />
+                                            <Text style={styles.imagePickerText}>Tap to upload image</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>Name *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={name}
+                                        onChangeText={setName}
+                                        placeholder="Garment name"
+                                        placeholderTextColor="#666"
                                     />
-                                ) : (
-                                    <>
-                                        <Text style={styles.imagePickerIcon}>📷</Text>
-                                        <Text style={styles.imagePickerText}>Tap to select image</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
+                                </View>
 
-                            <Text style={styles.inputLabel}>Name *</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={name}
-                                onChangeText={setName}
-                                placeholder="Garment name"
-                                placeholderTextColor="#666"
-                            />
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>Category *</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
+                                        {categories.map((cat) => (
+                                            <TouchableOpacity
+                                                key={cat}
+                                                style={[styles.chip, category === cat && styles.chipActive]}
+                                                onPress={() => setCategory(cat)}
+                                            >
+                                                <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>
+                                                    {cat}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
 
-                            <Text style={styles.inputLabel}>Category *</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
-                                {categories.map((cat) => (
-                                    <TouchableOpacity
-                                        key={cat}
-                                        style={[styles.chip, category === cat && styles.chipActive]}
-                                        onPress={() => setCategory(cat)}
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>Gender *</Text>
+                                    <View style={styles.genderRow}>
+                                        {genders.map((g) => (
+                                            <TouchableOpacity
+                                                key={g}
+                                                style={[styles.genderChip, gender === g && styles.genderChipActive]}
+                                                onPress={() => setGender(g)}
+                                            >
+                                                <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
+                                                    {g}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                <View style={styles.row}>
+                                    <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                                        <Text style={styles.label}>Fabric</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={fabric}
+                                            onChangeText={setFabric}
+                                            placeholder="e.g. Cotton"
+                                            placeholderTextColor="#666"
+                                        />
+                                    </View>
+                                    <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                                        <Text style={styles.label}>Color</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={color}
+                                            onChangeText={setColor}
+                                            placeholder="e.g. Red"
+                                            placeholderTextColor="#666"
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>Description</Text>
+                                    <TextInput
+                                        style={[styles.input, styles.textArea]}
+                                        value={description}
+                                        onChangeText={setDescription}
+                                        placeholder="Optional description"
+                                        placeholderTextColor="#666"
+                                        multiline
+                                        numberOfLines={3}
+                                    />
+                                </View>
+
+                                <TouchableOpacity
+                                    style={styles.submitButtonContainer}
+                                    onPress={handleSubmit}
+                                    disabled={submitting}
+                                >
+                                    <LinearGradient
+                                        colors={['#6366f1', '#8b5cf6']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={styles.submitButton}
                                     >
-                                        <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>
-                                            {cat}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                        {submitting ? (
+                                            <ActivityIndicator color="#fff" />
+                                        ) : (
+                                            <Text style={styles.submitButtonText}>
+                                                {editingGarment ? 'Update Garment' : 'Create Garment'}
+                                            </Text>
+                                        )}
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </ScrollView>
-
-                            <Text style={styles.inputLabel}>Gender *</Text>
-                            <View style={styles.genderRow}>
-                                {genders.map((g) => (
-                                    <TouchableOpacity
-                                        key={g}
-                                        style={[styles.genderChip, gender === g && styles.genderChipActive]}
-                                        onPress={() => setGender(g)}
-                                    >
-                                        <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
-                                            {g}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={styles.inputLabel}>Fabric</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={fabric}
-                                onChangeText={setFabric}
-                                placeholder="e.g., Cotton, Silk"
-                                placeholderTextColor="#666"
-                            />
-
-                            <Text style={styles.inputLabel}>Color</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={color}
-                                onChangeText={setColor}
-                                placeholder="e.g., Red, Blue"
-                                placeholderTextColor="#666"
-                            />
-
-                            <Text style={styles.inputLabel}>Description</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                value={description}
-                                onChangeText={setDescription}
-                                placeholder="Optional description"
-                                placeholderTextColor="#666"
-                                multiline
-                                numberOfLines={3}
-                            />
-
-                            <TouchableOpacity
-                                style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-                                onPress={handleSubmit}
-                                disabled={submitting}
-                            >
-                                {submitting ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.submitButtonText}>
-                                        {editingGarment ? 'Update Garment' : 'Create Garment'}
-                                    </Text>
-                                )}
-                            </TouchableOpacity>
-                        </ScrollView>
+                        </LinearGradient>
                     </View>
                 </View>
             </Modal>
@@ -358,75 +472,145 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#0f0f23',
     },
-    addButton: {
-        margin: 20,
-        backgroundColor: '#6366f1',
-        borderRadius: 12,
-        padding: 16,
+    header: {
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        gap: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#2d2d44',
     },
-    addButtonText: {
-        color: '#fff',
+    searchSection: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 12,
+        height: 50,
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
         fontSize: 16,
-        fontWeight: '600',
+        color: '#fff',
+    },
+    addInitButton: {
+        shadowColor: "#6366f1",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+    },
+    addInitGradient: {
+        width: 50,
+        height: 50,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     list: {
         paddingHorizontal: 20,
-        paddingBottom: 20,
+        paddingTop: 20,
+        paddingBottom: 40,
+    },
+    cardContainer: {
+        marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
     },
     garmentCard: {
-        flexDirection: 'row',
-        backgroundColor: '#1a1a2e',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    cardContent: {
+        flexDirection: 'row',
         marginBottom: 12,
-        alignItems: 'center',
     },
     garmentImage: {
-        width: 60,
-        height: 80,
-        borderRadius: 8,
+        width: 80,
+        height: 100,
+        borderRadius: 12,
         backgroundColor: '#2d2d44',
     },
     garmentInfo: {
         flex: 1,
         marginLeft: 12,
     },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
     garmentName: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
         color: '#fff',
-    },
-    garmentMeta: {
-        fontSize: 13,
-        color: '#888',
-        marginTop: 4,
-        textTransform: 'capitalize',
+        flex: 1,
+        marginRight: 8,
     },
     inactiveBadge: {
-        backgroundColor: '#f59e0b20',
-        paddingHorizontal: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-        marginTop: 6,
+        borderRadius: 6,
+        gap: 4,
     },
     inactiveText: {
+        fontSize: 10,
         color: '#f59e0b',
-        fontSize: 11,
-        fontWeight: '600',
+        fontWeight: '700',
     },
-    garmentActions: {
+    tagsRow: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginBottom: 8,
     },
-    editBtn: {
-        padding: 8,
+    tag: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
     },
-    toggleBtn: {
-        padding: 8,
+    tagText: {
+        fontSize: 11,
+        color: '#ccc',
+        textTransform: 'capitalize',
     },
-    deleteBtn: {
-        padding: 8,
+    description: {
+        fontSize: 12,
+        color: '#888',
+        lineHeight: 16,
+    },
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 8,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+    },
+    actionButton: {
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    actionGradient: {
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     loadingContainer: {
         flex: 1,
@@ -435,27 +619,39 @@ const styles = StyleSheet.create({
     },
     emptyContainer: {
         alignItems: 'center',
-        paddingTop: 60,
-    },
-    emptyIcon: {
-        fontSize: 64,
-        marginBottom: 16,
+        paddingTop: 80,
+        opacity: 0.5,
     },
     emptyText: {
-        fontSize: 16,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginTop: 16,
+        marginBottom: 4,
+    },
+    emptySubText: {
+        fontSize: 14,
         color: '#888',
     },
+
+    // Modal
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.8)',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        padding: 20,
     },
     modalContent: {
-        backgroundColor: '#1a1a2e',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 24,
+        borderRadius: 24,
+        overflow: 'hidden',
+        width: '100%',
         maxHeight: '90%',
+    },
+    modalGradient: {
+        padding: 24,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -464,73 +660,81 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: '600',
+        fontSize: 22,
+        fontWeight: 'bold',
         color: '#fff',
     },
     closeButton: {
-        fontSize: 24,
-        color: '#888',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     imagePicker: {
         width: '100%',
-        aspectRatio: 0.75,
-        backgroundColor: '#0f0f23',
-        borderRadius: 12,
+        aspectRatio: 1.5,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
-        borderWidth: 2,
-        borderColor: '#2d2d44',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
         borderStyle: 'dashed',
+        overflow: 'hidden',
+    },
+    imagePlaceholder: {
+        alignItems: 'center',
     },
     pickedImage: {
         width: '100%',
         height: '100%',
-        borderRadius: 12,
-    },
-    imagePickerIcon: {
-        fontSize: 40,
-        marginBottom: 8,
     },
     imagePickerText: {
         color: '#888',
         fontSize: 14,
+        marginTop: 8,
     },
-    inputLabel: {
-        fontSize: 14,
+    formGroup: {
+        marginBottom: 16,
+    },
+    label: {
+        color: '#a1a1aa',
+        fontSize: 13,
         fontWeight: '600',
-        color: '#ccc',
         marginBottom: 8,
+        marginLeft: 4,
     },
     input: {
-        backgroundColor: '#0f0f23',
-        borderRadius: 10,
-        padding: 14,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 12,
         fontSize: 16,
         color: '#fff',
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#2d2d44',
     },
     textArea: {
         height: 80,
         textAlignVertical: 'top',
     },
     chips: {
-        marginBottom: 16,
+        flexDirection: 'row',
+        marginBottom: 4,
     },
     chip: {
         paddingHorizontal: 14,
         paddingVertical: 8,
-        borderRadius: 16,
-        backgroundColor: '#0f0f23',
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         marginRight: 8,
         borderWidth: 1,
-        borderColor: '#2d2d44',
+        borderColor: 'transparent',
     },
     chipActive: {
-        backgroundColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
         borderColor: '#6366f1',
     },
     chipText: {
@@ -540,49 +744,55 @@ const styles = StyleSheet.create({
     },
     chipTextActive: {
         color: '#fff',
+        fontWeight: '600',
     },
     genderRow: {
         flexDirection: 'row',
-        marginBottom: 16,
+        gap: 8,
     },
     genderChip: {
         flex: 1,
-        paddingVertical: 12,
-        borderRadius: 10,
-        backgroundColor: '#0f0f23',
-        marginRight: 8,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#2d2d44',
+        borderColor: 'transparent',
     },
     genderChipActive: {
-        backgroundColor: '#ec4899',
+        backgroundColor: 'rgba(236, 72, 153, 0.15)',
         borderColor: '#ec4899',
     },
     genderText: {
         color: '#888',
-        fontSize: 14,
+        fontSize: 13,
         textTransform: 'capitalize',
     },
     genderTextActive: {
         color: '#fff',
         fontWeight: '600',
     },
-    submitButton: {
-        backgroundColor: '#6366f1',
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 8,
-        marginBottom: 20,
+    row: {
+        flexDirection: 'row',
     },
-    submitButtonDisabled: {
-        opacity: 0.7,
+    submitButtonContainer: {
+        marginTop: 8,
+        marginBottom: 16,
+        shadowColor: "#6366f1",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+    },
+    submitButton: {
+        padding: 16,
+        borderRadius: 16,
+        alignItems: 'center',
     },
     submitButtonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
 });
 

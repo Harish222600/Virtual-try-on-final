@@ -7,9 +7,11 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    Modal,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { adminAPI } from '../../api';
 
@@ -17,13 +19,10 @@ const AdminDashboardScreen = ({ navigation }) => {
     const { isAdmin } = useAuth();
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [models, setModels] = useState([]);
-    const [modelModalVisible, setModelModalVisible] = useState(false);
-    const [changingModel, setChangingModel] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         loadAnalytics();
-        loadModels();
     }, []);
 
     const loadAnalytics = async () => {
@@ -31,44 +30,24 @@ const AdminDashboardScreen = ({ navigation }) => {
             const response = await adminAPI.getAnalytics();
             setAnalytics(response.data);
         } catch (error) {
+            console.error(error);
             Alert.alert('Error', 'Failed to load analytics');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
-    const loadModels = async () => {
-        try {
-            const response = await adminAPI.getModels();
-            setModels(response.data);
-        } catch (error) {
-            console.log('Failed to load models:', error);
-        }
-    };
-
-    const handleModelChange = async (modelId) => {
-        setChangingModel(true);
-        try {
-            const response = await adminAPI.setActiveModel(modelId);
-            Alert.alert('Success', response.message);
-            await loadModels(); // Refresh model list
-            setModelModalVisible(false);
-        } catch (error) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to change model');
-        } finally {
-            setChangingModel(false);
-        }
-    };
-
-    const getActiveModel = () => {
-        return models.find(m => m.isActive) || { name: 'Loading...' };
+    const handleRefresh = () => {
+        setRefreshing(true);
+        loadAnalytics();
     };
 
     if (!isAdmin) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.accessDenied}>
-                    <Text style={styles.accessDeniedIcon}>🚫</Text>
+                    <Ionicons name="alert-circle" size={64} color="#ef4444" />
                     <Text style={styles.accessDeniedText}>Admin access required</Text>
                 </View>
             </SafeAreaView>
@@ -85,199 +64,147 @@ const AdminDashboardScreen = ({ navigation }) => {
         );
     }
 
-    const StatCard = ({ title, value, icon, color }) => (
-        <View style={[styles.statCard, { borderColor: color }]}>
-            <Text style={styles.statIcon}>{icon}</Text>
+    const StatCard = ({ title, value, icon, color, subtitle }) => (
+        <LinearGradient
+            colors={['#1a1a2e', '#2d2d44']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statCard}
+        >
+            <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+                <Ionicons name={icon} size={24} color={color} />
+            </View>
             <Text style={styles.statValue}>{value}</Text>
             <Text style={styles.statTitle}>{title}</Text>
-        </View>
+            {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+        </LinearGradient>
     );
 
-    const MenuItem = ({ icon, title, subtitle, onPress, rightElement }) => (
+    const MenuItem = ({ icon, title, subtitle, onPress, color = "#6366f1" }) => (
         <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-            <View style={styles.menuIcon}>
-                <Text style={styles.menuIconText}>{icon}</Text>
-            </View>
-            <View style={styles.menuContent}>
-                <Text style={styles.menuTitle}>{title}</Text>
-                <Text style={styles.menuSubtitle}>{subtitle}</Text>
-            </View>
-            {rightElement || <Text style={styles.chevron}>›</Text>}
-        </TouchableOpacity>
-    );
-
-    const ModelOption = ({ model, onSelect }) => (
-        <TouchableOpacity
-            style={[
-                styles.modelOption,
-                model.isActive && styles.modelOptionActive
-            ]}
-            onPress={() => onSelect(model.id)}
-            disabled={model.isActive || changingModel}
-        >
-            <View style={styles.modelInfo}>
-                <Text style={[styles.modelName, model.isActive && styles.modelNameActive]}>
-                    {model.name}
-                </Text>
-                <Text style={styles.modelDescription}>{model.description}</Text>
-                <View style={styles.modelMeta}>
-                    <Text style={styles.modelTime}>⏱ {model.avgProcessingTime}</Text>
-                    {model.strengths?.slice(0, 2).map((s, i) => (
-                        <Text key={i} style={styles.modelTag}>{s}</Text>
-                    ))}
+            <LinearGradient
+                colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+                style={styles.menuItemGradient}
+            >
+                <View style={[styles.menuIcon, { backgroundColor: `${color}20` }]}>
+                    <Ionicons name={icon} size={24} color={color} />
                 </View>
-            </View>
-            {model.isActive ? (
-                <View style={styles.activeIndicator}>
-                    <Text style={styles.activeText}>✓ Active</Text>
+                <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>{title}</Text>
+                    <Text style={styles.menuSubtitle}>{subtitle}</Text>
                 </View>
-            ) : (
-                <Text style={styles.selectText}>Select</Text>
-            )}
+                <Ionicons name="chevron-forward" size={20} color="#666" />
+            </LinearGradient>
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+        <SafeAreaView style={styles.container} edges={['bottom']}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#6366f1" />
+                }
+            >
                 <View style={styles.header}>
-                    <Text style={styles.title}>Admin Dashboard</Text>
-                    <TouchableOpacity onPress={() => { loadAnalytics(); loadModels(); }}>
-                        <Text style={styles.refreshIcon}>🔄</Text>
+                    <View>
+                        <Text style={styles.title}>Admin Dashboard</Text>
+                        <Text style={styles.subtitle}>Welcome back, Admin</Text>
+                    </View>
+                    <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+                        <Ionicons name="refresh" size={20} color="#fff" />
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.statsGrid}>
-                    <StatCard
-                        title="Total Users"
-                        value={analytics?.users?.total || 0}
-                        icon="👥"
-                        color="#6366f1"
-                    />
-                    <StatCard
-                        title="Active Garments"
-                        value={analytics?.garments?.active || 0}
-                        icon="👗"
-                        color="#ec4899"
-                    />
-                    <StatCard
-                        title="Total Try-Ons"
-                        value={analytics?.tryOns?.total || 0}
-                        icon="✨"
-                        color="#10b981"
-                    />
-                    <StatCard
-                        title="Success Rate"
-                        value={`${analytics?.tryOns?.successRate || 0}%`}
-                        icon="📊"
-                        color="#f59e0b"
-                    />
-                </View>
-
-                <View style={styles.todayStats}>
-                    <Text style={styles.sectionTitle}>Today's Activity</Text>
-                    <View style={styles.todayRow}>
-                        <View style={styles.todayStat}>
-                            <Text style={styles.todayValue}>{analytics?.users?.newToday || 0}</Text>
-                            <Text style={styles.todayLabel}>New Users</Text>
-                        </View>
-                        <View style={styles.todayStat}>
-                            <Text style={styles.todayValue}>{analytics?.tryOns?.today || 0}</Text>
-                            <Text style={styles.todayLabel}>Try-Ons</Text>
-                        </View>
-                        <View style={styles.todayStat}>
-                            <Text style={styles.todayValue}>
-                                {analytics?.tryOns?.avgProcessingTime
-                                    ? `${(analytics.tryOns.avgProcessingTime / 1000).toFixed(1)}s`
-                                    : '-'}
-                            </Text>
-                            <Text style={styles.todayLabel}>Avg Time</Text>
-                        </View>
+                    <View style={styles.statsRow}>
+                        <StatCard
+                            title="Total Users"
+                            value={analytics?.users?.total || 0}
+                            icon="people"
+                            color="#6366f1"
+                            subtitle={`+${analytics?.users?.newToday || 0} today`}
+                        />
+                        <StatCard
+                            title="Try-Ons"
+                            value={analytics?.tryOns?.total || 0}
+                            icon="shirt"
+                            color="#ec4899"
+                            subtitle={`+${analytics?.tryOns?.today || 0} today`}
+                        />
                     </View>
-                </View>
-
-                {/* AI Model Settings */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>AI Model Settings</Text>
-                    <MenuItem
-                        icon="🤖"
-                        title="Active Model"
-                        subtitle={getActiveModel().name}
-                        onPress={() => setModelModalVisible(true)}
-                        rightElement={
-                            <View style={styles.modelBadge}>
-                                <Text style={styles.modelBadgeText}>{getActiveModel().name}</Text>
-                            </View>
-                        }
-                    />
+                    <View style={styles.statsRow}>
+                        <StatCard
+                            title="Active Items"
+                            value={analytics?.garments?.active || 0}
+                            icon="layers"
+                            color="#10b981"
+                        />
+                        <StatCard
+                            title="Success Rate"
+                            value={`${analytics?.tryOns?.successRate || 0}%`}
+                            icon="stats-chart"
+                            color="#f59e0b"
+                        />
+                    </View>
                 </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Management</Text>
                     <MenuItem
-                        icon="👥"
+                        icon="people"
                         title="User Management"
-                        subtitle="View and manage users"
+                        subtitle="Manage users, roles & blocks"
                         onPress={() => navigation.navigate('UserManagement')}
+                        color="#6366f1"
                     />
                     <MenuItem
-                        icon="👗"
+                        icon="shirt"
                         title="Garment Management"
-                        subtitle="Add and edit garments"
+                        subtitle="Add, edit & remove items"
                         onPress={() => navigation.navigate('GarmentManagement')}
+                        color="#ec4899"
                     />
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Popular Garments</Text>
-                    {analytics?.popularGarments?.map((garment, index) => (
-                        <View key={garment._id} style={styles.popularItem}>
-                            <Text style={styles.popularRank}>#{index + 1}</Text>
-                            <View style={styles.popularContent}>
-                                <Text style={styles.popularName}>{garment.name}</Text>
-                                <Text style={styles.popularCategory}>{garment.category}</Text>
-                            </View>
-                            <Text style={styles.popularCount}>{garment.tryOnCount} try-ons</Text>
-                        </View>
-                    ))}
+                    <Text style={styles.sectionTitle}>System & Analytics</Text>
+                    <MenuItem
+                        icon="bar-chart"
+                        title="Advanced Analytics"
+                        subtitle="Detailed charts & trends"
+                        onPress={() => navigation.navigate('Analytics')}
+                        color="#10b981"
+                    />
+                    <MenuItem
+                        icon="terminal"
+                        title="System Logs"
+                        subtitle="View system activities & errors"
+                        onPress={() => navigation.navigate('SystemLogs')}
+                        color="#f59e0b"
+                    />
                 </View>
+
+                {/* Quick Model Status */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>AI Model Status</Text>
+                    <LinearGradient
+                        colors={['#1a1a2e', '#2d2d44']}
+                        style={styles.modelStatusCard}
+                    >
+                        <View style={styles.modelInfo}>
+                            <Ionicons name="hardware-chip" size={24} color="#8b5cf6" />
+                            <View style={styles.modelText}>
+                                <Text style={styles.modelName}>IDM-VTON (yisol)</Text>
+                                <Text style={styles.modelStatus}>Operational</Text>
+                            </View>
+                        </View>
+                        <View style={styles.statusDot} />
+                    </LinearGradient>
+                </View>
+
+                <View style={{ height: 20 }} />
             </ScrollView>
-
-            {/* Model Selection Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modelModalVisible}
-                onRequestClose={() => setModelModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select AI Model</Text>
-                            <TouchableOpacity onPress={() => setModelModalVisible(false)}>
-                                <Text style={styles.modalClose}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView style={styles.modelList}>
-                            {models.map(model => (
-                                <ModelOption
-                                    key={model.id}
-                                    model={model}
-                                    onSelect={handleModelChange}
-                                />
-                            ))}
-                        </ScrollView>
-
-                        {changingModel && (
-                            <View style={styles.changingOverlay}>
-                                <ActivityIndicator size="large" color="#6366f1" />
-                                <Text style={styles.changingText}>Switching model...</Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 };
@@ -293,15 +220,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingTop: 10,
-        paddingBottom: 16,
+        paddingBottom: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#fff',
     },
-    refreshIcon: {
-        fontSize: 24,
+    subtitle: {
+        fontSize: 14,
+        color: '#888',
+        marginTop: 4,
+    },
+    refreshButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     loadingContainer: {
         flex: 1,
@@ -313,32 +250,34 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    accessDeniedIcon: {
-        fontSize: 64,
-        marginBottom: 16,
-    },
     accessDeniedText: {
         fontSize: 18,
         color: '#888',
+        marginTop: 16,
     },
     statsGrid: {
+        paddingHorizontal: 16,
+        marginBottom: 24,
+    },
+    statsRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        paddingHorizontal: 12,
-        marginBottom: 16,
+        marginBottom: 12,
+        gap: 12,
     },
     statCard: {
-        width: '45%',
-        margin: '2.5%',
+        flex: 1,
         padding: 16,
-        backgroundColor: '#1a1a2e',
-        borderRadius: 16,
+        borderRadius: 20,
         borderWidth: 1,
-        alignItems: 'center',
+        borderColor: 'rgba(255,255,255,0.05)',
     },
-    statIcon: {
-        fontSize: 28,
-        marginBottom: 8,
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     statValue: {
         fontSize: 24,
@@ -350,59 +289,41 @@ const styles = StyleSheet.create({
         color: '#888',
         marginTop: 4,
     },
-    todayStats: {
-        marginHorizontal: 20,
+    statSubtitle: {
+        fontSize: 10,
+        color: '#10b981',
+        marginTop: 4,
+        fontWeight: '600',
+    },
+    section: {
+        paddingHorizontal: 20,
         marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#888',
-        marginBottom: 12,
-    },
-    todayRow: {
-        flexDirection: 'row',
-        backgroundColor: '#1a1a2e',
-        borderRadius: 16,
-        padding: 16,
-    },
-    todayStat: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    todayValue: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#6366f1',
-    },
-    todayLabel: {
-        fontSize: 12,
-        color: '#888',
-        marginTop: 4,
-    },
-    section: {
-        marginHorizontal: 20,
-        marginBottom: 24,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 16,
     },
     menuItem: {
+        marginBottom: 12,
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    menuItemGradient: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1a1a2e',
-        borderRadius: 12,
         padding: 16,
-        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     menuIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: '#2d2d44',
+        width: 48,
+        height: 48,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 14,
-    },
-    menuIconText: {
-        fontSize: 20,
+        marginRight: 16,
     },
     menuContent: {
         flex: 1,
@@ -411,169 +332,47 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#fff',
+        marginBottom: 4,
     },
     menuSubtitle: {
-        fontSize: 13,
-        color: '#888',
-        marginTop: 2,
-    },
-    chevron: {
-        fontSize: 24,
-        color: '#888',
-    },
-    modelBadge: {
-        backgroundColor: '#6366f1',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    modelBadgeText: {
-        color: '#fff',
         fontSize: 12,
-        fontWeight: '600',
+        color: '#888',
     },
-    popularItem: {
+    modelStatusCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1a1a2e',
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 8,
-    },
-    popularRank: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#6366f1',
-        width: 30,
-    },
-    popularContent: {
-        flex: 1,
-    },
-    popularName: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#fff',
-    },
-    popularCategory: {
-        fontSize: 12,
-        color: '#888',
-        textTransform: 'capitalize',
-    },
-    popularCount: {
-        fontSize: 12,
-        color: '#10b981',
-        fontWeight: '600',
-    },
-    // Modal styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#1a1a2e',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        maxHeight: '80%',
-    },
-    modalHeader: {
-        flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#2d2d44',
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#fff',
-    },
-    modalClose: {
-        fontSize: 24,
-        color: '#888',
-    },
-    modelList: {
         padding: 16,
-    },
-    modelOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#2d2d44',
         borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 2,
-        borderColor: 'transparent',
-    },
-    modelOptionActive: {
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     modelInfo: {
-        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    modelText: {
+        marginLeft: 12,
     },
     modelName: {
         fontSize: 16,
         fontWeight: '600',
         color: '#fff',
-        marginBottom: 4,
     },
-    modelNameActive: {
-        color: '#6366f1',
-    },
-    modelDescription: {
-        fontSize: 13,
-        color: '#888',
-        marginBottom: 8,
-    },
-    modelMeta: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-    },
-    modelTime: {
-        fontSize: 11,
-        color: '#888',
-        marginRight: 8,
-    },
-    modelTag: {
-        fontSize: 10,
-        color: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 10,
-        marginRight: 4,
-    },
-    activeIndicator: {
-        backgroundColor: '#10b981',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    activeText: {
-        color: '#fff',
+    modelStatus: {
         fontSize: 12,
-        fontWeight: '600',
+        color: '#10b981',
+        marginTop: 2,
     },
-    selectText: {
-        color: '#6366f1',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    changingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-    },
-    changingText: {
-        color: '#fff',
-        marginTop: 16,
-        fontSize: 16,
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#10b981',
+        shadowColor: "#10b981",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 10,
     },
 });
 

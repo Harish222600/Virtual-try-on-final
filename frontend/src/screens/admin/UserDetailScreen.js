@@ -19,6 +19,7 @@ const UserDetailScreen = ({ route, navigation }) => {
     const [user, setUser] = useState(null);
     const [activity, setActivity] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [updatingRole, setUpdatingRole] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -47,6 +48,33 @@ const UserDetailScreen = ({ route, navigation }) => {
         } catch (error) {
             Alert.alert('Error', 'Failed to update user status');
         }
+    };
+
+    const handleUpdateRole = () => {
+        const newRole = user.role === 'admin' ? 'user' : 'admin';
+
+        Alert.alert(
+            'Change Role',
+            `Are you sure you want to change this user's role to ${newRole.toUpperCase()}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Confirm',
+                    onPress: async () => {
+                        setUpdatingRole(true);
+                        try {
+                            const response = await adminAPI.updateUserRole(userId, newRole);
+                            setUser(prev => ({ ...prev, role: response.data.role }));
+                            Alert.alert('Success', `User role updated to ${response.data.role}`);
+                        } catch (error) {
+                            Alert.alert('Error', error.response?.data?.message || 'Failed to update role');
+                        } finally {
+                            setUpdatingRole(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const formatDate = (dateString) => {
@@ -110,7 +138,18 @@ const UserDetailScreen = ({ route, navigation }) => {
                     <View style={styles.card}>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Role</Text>
-                            <Text style={styles.detailValue}>{user.role}</Text>
+                            <View style={styles.roleRow}>
+                                <Text style={styles.detailValue}>{user.role}</Text>
+                                <TouchableOpacity
+                                    style={styles.editRoleButton}
+                                    onPress={handleUpdateRole}
+                                    disabled={updatingRole}
+                                >
+                                    <Text style={styles.editRoleText}>
+                                        {updatingRole ? '...' : 'Change'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Joined</Text>
@@ -309,6 +348,24 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
         textTransform: 'capitalize',
+    },
+    roleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    editRoleButton: {
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#6366f1',
+    },
+    editRoleText: {
+        color: '#6366f1',
+        fontSize: 12,
+        fontWeight: '600',
     },
     historyCard: {
         backgroundColor: '#1a1a2e',
