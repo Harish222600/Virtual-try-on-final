@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Virtual Try-On",
+    "slug": "virtual-tryon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6366f1"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.virtualtryon.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to capture photos for virtual try-on.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photos for virtual try-on."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6366f1"
+      },
+      "package": "com.virtualtryon.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Virtual Try-On to access your camera for taking photos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Virtual Try-On to access your photos for virtual try-on."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5f36edc4-f030-4dca-8916-cb1d54bfceb2"
+      }
+    }
+  }
+}
