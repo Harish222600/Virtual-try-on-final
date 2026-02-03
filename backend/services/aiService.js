@@ -32,13 +32,22 @@ const performTryOn = async (personImageUrl, garmentImageUrl) => {
     try {
         // 1. Initialize Client
         // We use hf_token if available to avoid rate limits/queue
-        const hasToken = !!process.env.HUGGINGFACE_API_KEY;
-        console.log(`🔑 HF Token configured: ${hasToken ? 'YES' : 'NO'} (${hasToken ? process.env.HUGGINGFACE_API_KEY.substring(0, 5) + '...' : ''})`);
+        let token = process.env.HUGGINGFACE_API_KEY;
 
-        const client = await Client.connect(SPACE_ID, {
-            hf_token: process.env.HUGGINGFACE_API_KEY,
-            headers: { "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}` }
-        });
+        // Sanitize token: remove quotes and whitespace if present
+        if (token) {
+            token = token.replace(/["']/g, '').trim();
+        }
+
+        const hasToken = !!token;
+        console.log(`🔑 HF Token configured: ${hasToken ? 'YES' : 'NO'} (${hasToken ? token.substring(0, 5) + '...' : ''})`);
+
+        const options = {};
+        if (hasToken) {
+            options.hf_token = token;
+        }
+
+        const client = await Client.connect(SPACE_ID, options);
 
         // 2. Fetch images as Blobs (Gradio JS client handles Blobs best for 'handle_file')
         const personBlob = await fetchImageBlob(personImageUrl);
@@ -123,7 +132,13 @@ const performTryOn = async (personImageUrl, garmentImageUrl) => {
 const checkModelStatus = async () => {
     try {
         // Simple check by connecting
-        await Client.connect(SPACE_ID, { hf_token: process.env.HUGGINGFACE_API_KEY });
+        let token = process.env.HUGGINGFACE_API_KEY;
+        if (token) {
+            token = token.replace(/["']/g, '').trim();
+        }
+        const options = token ? { hf_token: token } : {};
+
+        await Client.connect(SPACE_ID, options);
         return { available: true, status: 'Connected' };
     } catch (error) {
         return { available: false, error: error.message };
