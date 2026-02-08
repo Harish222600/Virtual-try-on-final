@@ -183,6 +183,13 @@ const AdminDashboardScreen = ({ navigation }) => {
                         onPress={() => navigation.navigate('SystemLogs')}
                         color="#f59e0b"
                     />
+                    <MenuItem
+                        icon="settings"
+                        title="System Config"
+                        subtitle="Detailed charts & trends"
+                        onPress={() => navigation.navigate('SystemSettings')}
+                        color="#6366f1"
+                    />
                 </View>
 
                 {/* Quick Model Status */}

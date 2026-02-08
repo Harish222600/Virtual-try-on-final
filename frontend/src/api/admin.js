@@ -72,6 +72,16 @@ export const adminAPI = {
         return response.data;
     },
 
+    getSystemConfig: async () => {
+        const response = await api.get('/admin/config');
+        return response.data;
+    },
+
+    updateSystemConfig: async (data) => {
+        const response = await api.put('/admin/config', data);
+        return response.data;
+    },
+
     // AI Model management
     getModels: async () => {
         const response = await api.get('/admin/models');

@@ -29,6 +29,7 @@ import TryOnDetailScreen from '../screens/admin/TryOnDetailScreen';
 import GarmentManagementScreen from '../screens/admin/GarmentManagementScreen';
 import SystemLogsScreen from '../screens/admin/SystemLogsScreen';
 import AnalyticsScreen from '../screens/admin/AnalyticsScreen';
+import SystemSettingsScreen from '../screens/admin/SystemSettingsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -191,6 +192,11 @@ const MainStack = () => (
             name="Analytics"
             component={AnalyticsScreen}
             options={{ title: 'Analytics' }}
+        />
+        <Stack.Screen
+            name="SystemSettings"
+            component={SystemSettingsScreen}
+            options={{ title: 'System Settings' }}
         />
         <Stack.Screen
             name="GarmentSelection"
