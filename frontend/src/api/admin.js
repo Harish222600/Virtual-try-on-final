@@ -67,6 +67,16 @@ export const adminAPI = {
         return response.data;
     },
 
+    getGarmentUsage: async () => {
+        const response = await api.get('/admin/analytics/garment-usage');
+        return response.data;
+    },
+
+    getUserUsage: async () => {
+        const response = await api.get('/admin/analytics/user-usage');
+        return response.data;
+    },
+
     getLogs: async (params = {}) => {
         const response = await api.get('/admin/logs', { params });
         return response.data;

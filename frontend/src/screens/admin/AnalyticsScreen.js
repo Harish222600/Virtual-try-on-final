@@ -7,14 +7,16 @@ import {
     ActivityIndicator,
     Dimensions,
     Alert,
+    TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart, PieChart, ProgressChart } from 'react-native-chart-kit';
+import { Ionicons as Icon } from '@expo/vector-icons';
 import { adminAPI } from '../../api';
 
 const { width } = Dimensions.get('window');
 
-const AnalyticsScreen = () => {
+const AnalyticsScreen = ({ navigation }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -179,6 +181,26 @@ const AnalyticsScreen = () => {
                     </View>
                 </View>
 
+                {/* Detailed Reports Navigation */}
+                <View style={styles.sectionContainer}>
+                    <Text style={styles.chartTitle}>Detailed Reports</Text>
+                    <TouchableOpacity
+                        style={styles.navButton}
+                        onPress={() => navigation.navigate('GarmentUsage')}
+                    >
+                        <Text style={styles.navButtonText}>View Garment Usage Stats</Text>
+                        <Icon name="chevron-forward" size={20} color="#fff" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.navButton}
+                        onPress={() => navigation.navigate('UserActivity')}
+                    >
+                        <Text style={styles.navButtonText}>View User Activity Stats</Text>
+                        <Icon name="chevron-forward" size={20} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+
                 <View style={{ height: 40 }} />
             </ScrollView>
         </SafeAreaView>
@@ -280,6 +302,26 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#fff',
+    },
+    sectionContainer: {
+        marginHorizontal: 20,
+        marginBottom: 24,
+    },
+    navButton: {
+        backgroundColor: '#1a1a2e',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    navButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     }
 });
 

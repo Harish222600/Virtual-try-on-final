@@ -29,7 +29,10 @@ import TryOnDetailScreen from '../screens/admin/TryOnDetailScreen';
 import GarmentManagementScreen from '../screens/admin/GarmentManagementScreen';
 import SystemLogsScreen from '../screens/admin/SystemLogsScreen';
 import AnalyticsScreen from '../screens/admin/AnalyticsScreen';
+
 import SystemSettingsScreen from '../screens/admin/SystemSettingsScreen';
+import GarmentUsageScreen from '../screens/admin/GarmentUsageScreen';
+import UserActivityScreen from '../screens/admin/UserActivityScreen';
 
 const Stack = createStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -197,6 +200,16 @@ const MainStack = () => (
             name="SystemSettings"
             component={SystemSettingsScreen}
             options={{ title: 'System Settings' }}
+        />
+        <Stack.Screen
+            name="GarmentUsage"
+            component={GarmentUsageScreen}
+            options={{ title: 'Garment Usage Stats' }}
+        />
+        <Stack.Screen
+            name="UserActivity"
+            component={UserActivityScreen}
+            options={{ title: 'User Activity Stats' }}
         />
         <Stack.Screen
             name="GarmentSelection"
